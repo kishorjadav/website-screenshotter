@@ -61,54 +61,57 @@ jobs:
             console.log("Waiting for page elements to load...");
             await new Promise(resolve => setTimeout(resolve, 6000));
 
-            console.log("Switching all three chart dropdowns to XAUT strictly...");
+            console.log("Targeting XAUT specifically on all dropdowns...");
             try {
               await page.evaluate(async () => {
                 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-                
-                // Find all dropdown triggers currently showing a coin ticker
-                const findTriggers = () => Array.from(document.querySelectorAll("div, button, span")).filter(el => {
-                  const t = el.textContent.trim();
-                  return (t === "BTC" || t === "ETH" || t === "XAUT") && el.offsetParent !== null && el.clientHeight < 50;
-                });
 
-                let triggers = findTriggers();
-                for (let i = 0; i < triggers.length; i++) {
-                  triggers = findTriggers();
-                  if (!triggers[i]) break;
+                // Helper function to find asset dropdown buttons on charts
+                const getAssetDropdowns = () => {
+                  return Array.from(document.querySelectorAll("div, button, span")).filter(el => {
+                    const text = el.textContent.trim();
+                    const isTicker = text === "BTC" || text === "ETH" || text === "XAUT";
+                    const isVisible = el.offsetParent !== null && el.clientHeight < 50;
+                    return isTicker && isVisible;
+                  });
+                };
 
-                  const trigger = triggers[i];
-                  if (trigger.textContent.trim() === "XAUT") continue;
+                let dropdowns = getAssetDropdowns();
+                for (let i = 0; i < dropdowns.length; i++) {
+                  dropdowns = getAssetDropdowns();
+                  if (!dropdowns[i]) break;
 
-                  trigger.click();
+                  const currentBtn = dropdowns[i];
+                  if (currentBtn.textContent.trim() === "XAUT") continue;
+
+                  // Open the dropdown menu
+                  currentBtn.click();
                   await sleep(1000);
 
-                  // Search for exact XAUT option in the opened dropdown list
-                  const options = Array.from(document.querySelectorAll("div, span, li, option"));
-                  const xautOpt = options.find(o => o.textContent.trim() === "XAUT" && o.offsetParent !== null);
-                  
-                  if (xautOpt) {
-                    xautOpt.click();
-                    await sleep(1200);
+                  // Search for elements containing exact string XAUT in opened popup
+                  const allVisibleElements = Array.from(document.querySelectorAll("*")).filter(el => el.offsetParent !== null);
+                  const xautElement = allVisibleElements.find(el => {
+                    const t = el.textContent ? el.textContent.trim() : "";
+                    // Match elements whose exact child text or text content equals XAUT
+                    return t === "XAUT" && el !== currentBtn && el.children.length === 0;
+                  });
+
+                  if (xautElement) {
+                    xautElement.click();
                   } else {
-                    // Fallback: type XAUT if search input exists
-                    const input = document.querySelector("input[placeholder*=\"Search\"], input[type=\"text\"]");
-                    if (input) {
-                      input.value = "XAUT";
-                      input.dispatchEvent(new Event("input", { bubbles: true }));
-                      await sleep(1000);
-                      const filteredOpt = Array.from(document.querySelectorAll("div, span, li")).find(o => o.textContent.trim() === "XAUT" && o.offsetParent !== null);
-                      if (filteredOpt) filteredOpt.click();
-                    }
+                    // Fallback: Click 3rd option in dropdown list if available
+                    const optionsList = allVisibleElements.filter(el => el.textContent.trim() === "BTC" || el.textContent.trim() === "ETH" || el.textContent.trim() === "XAUT");
+                    const thirdOption = optionsList.find(el => el.textContent.trim() === "XAUT");
+                    if (thirdOption) thirdOption.click();
                   }
-                  await sleep(1000);
+                  await sleep(1200);
                 }
               });
             } catch (e) {
-              console.log("Dropdown automation error:", e.message);
+              console.log("Dropdown interaction note:", e.message);
             }
 
-            console.log("Waiting 12 seconds for all XAUT charts to render fully...");
+            console.log("Waiting 12 seconds for all XAUT charts to render...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
             const dir = path.join(process.cwd(), "screenshots");
@@ -133,5 +136,5 @@ jobs:
       - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured XAUT strict selection screenshot [skip ci]'
+          commit_message: 'Auto-captured XAUT target screenshot [skip ci]'
           branch: main
