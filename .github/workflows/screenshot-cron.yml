@@ -22,11 +22,11 @@ jobs:
       - name: Create screenshots directory
         run: mkdir -p screenshots
 
-      - name: Download Screenshot via API with Delay
+      - name: Download Screenshot via API with 10s Delay
         run: |
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-          # Added &delay=5000 (5 seconds) so the page finishes loading before the screenshot is snapped
-          curl "https://api.microlink.io/?url=https%3A%2F%2Fwww.delta.exchange%2Fapp%2Foptions_analytics&screenshot=true&meta=false&embed=screenshot.url&delay=5000" -o "screenshots/xaut-$TIMESTAMP.png"
+          # Increased delay to 10 seconds (&delay=10000) for heavy charts to load
+          curl "https://api.microlink.io/?url=https%3A%2F%2Fwww.delta.exchange%2Fapp%2Foptions_analytics&screenshot=true&meta=false&embed=screenshot.url&delay=10000" -o "screenshots/xaut-$TIMESTAMP.png"
 
       - name: Commit and Push Screenshots
         uses: stefanzweifel/git-auto-commit-action@v5
