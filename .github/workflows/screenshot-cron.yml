@@ -58,8 +58,43 @@ jobs:
               timeout: 60000 
             });
 
-            console.log("Waiting 12 seconds for charts and data to render fully...");
-            await new Promise(resolve => setTimeout(resolve, 12000));
+            console.log("Waiting for page elements to load...");
+            await new Promise(resolve => setTimeout(resolve, 6000));
+
+            console.log("Attempting to switch asset from BTC to XAUT...");
+            try {
+              // Find and click the asset dropdown trigger (usually displaying BTC)
+              const clickedDropdown = await page.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll("div, span, button"));
+                const target = elements.find(el => el.textContent.trim() === "BTC" && el.offsetParent !== null);
+                if (target) {
+                  target.click();
+                  return true;
+                }
+                return false;
+              });
+
+              if (clickedDropdown) {
+                console.log("Dropdown clicked, searching for XAUT option...");
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Click the XAUT option from the opened menu list
+                await page.evaluate(() => {
+                  const options = Array.from(document.querySelectorAll("div, span, li"));
+                  const xaut = options.find(el => el.textContent.trim() === "XAUT" && el.offsetParent !== null);
+                  if (xaut) {
+                    xaut.click();
+                  }
+                });
+              } else {
+                console.log("Could not find BTC dropdown selector element directly.");
+              }
+            } catch (e) {
+              console.log("Error interacting with asset dropdown:", e.message);
+            }
+
+            console.log("Waiting 10 seconds for XAUT charts and analytics to render fully...");
+            await new Promise(resolve => setTimeout(resolve, 10000));
 
             const dir = path.join(process.cwd(), "screenshots");
             if (!fs.existsSync(dir)) {
