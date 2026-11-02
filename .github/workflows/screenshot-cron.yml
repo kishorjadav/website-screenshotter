@@ -1,18 +1,19 @@
-name: Scheduled Website Screenshotter
+name: Delta Exchange Screenshot Cron
 
 on:
   schedule:
-    # 5:30 AM IST (12:00 UTC) - Mon-Fri
-    - cron: '0 12 * * 1-5'
-    # 9:35 PM IST (16:05 UTC) - Mon-Fri
+    # 5:30 AM IST (00:00 UTC) - Monday to Friday
+    - cron: '0 0 * * 1-5'
+    # 9:35 PM IST (16:05 UTC) - Monday to Friday
     - cron: '5 16 * * 1-5'
-    # 10:00 PM IST (16:30 UTC) - Mon-Fri
+    # 10:00 PM IST (16:30 UTC) - Monday to Friday
     - cron: '30 16 * * 1-5'
 
+  # Allows manual testing from the Actions tab anytime
   workflow_dispatch:
 
 jobs:
-  take-screenshots:
+  take-screenshot:
     runs-on: ubuntu-latest
 
     steps:
@@ -27,48 +28,60 @@ jobs:
       - name: Install Puppeteer
         run: npm install puppeteer
 
-      - name: Create Screenshot Script with 5s Delay
+      - name: Run Screenshot Automation Script
         run: |
-          cat << 'EOF' > capture.js
-          const puppeteer = require('puppeteer');
-          const fs = require('fs');
-          const path = require('path');
+          node -e '
+          const puppeteer = require("puppeteer");
+          const fs = require("fs");
+          const path = require("path");
 
-          async function run() {
+          (async () => {
+            console.log("Launching headless browser...");
             const browser = await puppeteer.launch({
-              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+              args: [
+                "--no-sandbox", 
+                "--disable-setuid-sandbox", 
+                "--disable-dev-shm-usage", 
+                "--disable-gpu",
+                "--window-size=1440,1200"
+              ]
             });
+
             const page = await browser.newPage();
             await page.setViewport({ width: 1440, height: 1200 });
 
-            console.log('Navigating to Delta Exchange...');
-            await page.goto('https://www.delta.exchange/app/options_analytics', { waitUntil: 'networkidle2', timeout: 60000 });
+            console.log("Navigating to Delta Exchange options analytics...");
+            await page.goto("https://www.delta.exchange/app/options_analytics", { 
+              waitUntil: "networkidle2", 
+              timeout: 60000 
+            });
 
-            console.log('Waiting 5 seconds for charts to render...');
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            console.log("Waiting 12 seconds for charts and data to render fully...");
+            await new Promise(resolve => setTimeout(resolve, 12000));
 
-            const dir = path.join(__dirname, 'screenshots');
-            if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+            // Ensure screenshots directory exists
+            const dir = path.join(process.cwd(), "screenshots");
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
 
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filePath = path.join(dir, `screenshot-${timestamp}.png`);
+            // Create timestamped filename
+            const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+            const filePath = path.join(dir, `xaut-${timestamp}.png`);
 
+            console.log("Taking screenshot...");
             await page.screenshot({ path: filePath, fullPage: true });
-            console.log(`Saved screenshot to ${filePath}`);
+            console.log(`Successfully saved screenshot to ${filePath}`);
 
             await browser.close();
-          }
-          run().catch(err => {
-            console.error(err);
+          })().catch(err => {
+            console.error("Error during screenshot execution:", err);
             process.exit(1);
           });
-          EOF
+          '
 
-      - name: Run Screenshot Script
-        run: node capture.js
-
-      - name: Commit and Push Screenshots
+      - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured loaded screenshot [skip ci]'
+          commit_message: 'Auto-captured XAUT options analytics screenshot [skip ci]'
           branch: main
