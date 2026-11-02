@@ -2,11 +2,11 @@ name: Scheduled Website Screenshotter
 
 on:
   schedule:
-    # 5:30 AM IST (12:00 UTC) - Mon-Fri
+    # 5:30 AM IST (12:00 UTC) - Mon-Frí
     - cron: '0 12 * * 1-5'
-    # 9:35 PM IST (16:05 UTC) - Mon-Fri
+    # 9:35 PM IST (16:05 UTC) - Mon-Frí
     - cron: '5 16 * * 1-5'
-    # 10:00 PM IST (16:30 UTC) - Mon-Fri
+    # 10:00 PM IST (16:30 UTC) - Mon-Frí
     - cron: '30 16 * * 1-5'
 
   workflow_dispatch:
@@ -19,16 +19,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - name: Create screenshots directory
+        run: mkdir -p screenshots
 
-      - name: Install Dependencies
-        run: npm install puppeteer
-
-      - name: Run Screenshot Script
-        run: node take-screenshot.js
+      - name: Download Screenshot via API
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+          # Using a reliable public rendering endpoint
+          curl "https://api.microlink.io/?url=https%3A%2F%2Fwww.delta.exchange%2Fapp%2Foptions_analytics&screenshot=true&meta=false&embed=screenshot.url" -o "screenshots/xaut-$TIMESTAMP.png"
 
       - name: Commit and Push Screenshots
         uses: stefanzweifel/git-auto-commit-action@v5
