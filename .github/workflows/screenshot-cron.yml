@@ -45,12 +45,13 @@ jobs:
                 "--disable-setuid-sandbox", 
                 "--disable-dev-shm-usage", 
                 "--disable-gpu",
-                "--window-size=1440,1200"
+                "--window-size=1440,1400"
               ]
             });
 
             const page = await browser.newPage();
-            await page.setViewport({ width: 1440, height: 1200 });
+            // Expanded height to ensure all three charts are fully visible
+            await page.setViewport({ width: 1440, height: 1600 });
 
             console.log("Navigating to Delta Exchange options analytics...");
             await page.goto("https://www.delta.exchange/app/options_analytics", { 
@@ -58,36 +59,42 @@ jobs:
               timeout: 60000 
             });
 
-            console.log("Waiting for page to load...");
+            console.log("Waiting for page elements to load...");
             await new Promise(resolve => setTimeout(resolve, 6000));
 
-            console.log("Switching asset from BTC to XAUT...");
+            console.log("Switching all chart dropdowns from BTC to XAUT...");
             try {
-              // Click all dropdown buttons that display BTC on the analytics charts
-              await page.evaluate(() => {
-                const buttons = Array.from(document.querySelectorAll("div, button, span"));
-                buttons.forEach(el => {
-                  if (el.textContent.trim() === "BTC" && el.offsetParent !== null && (el.className.includes("dropdown") || el.className.includes("select") || el.querySelector("svg") || el.innerHTML.includes("svg"))) {
-                    el.click();
+              // Loop to find and change every chart dropdown showing BTC to XAUT
+              for (let i = 0; i < 3; i++) {
+                const clicked = await page.evaluate(() => {
+                  const elements = Array.from(document.querySelectorAll("div, button, span"));
+                  const target = elements.find(el => el.textContent.trim() === "BTC" && el.offsetParent !== null && (el.className.includes("dropdown") || el.className.includes("select") || el.querySelector("svg") || el.innerHTML.includes("svg")));
+                  if (target) {
+                    target.click();
+                    return true;
                   }
+                  return false;
                 });
-              });
 
-              await new Promise(resolve => setTimeout(resolve, 2000));
-
-              // Click XAUT from the opened dropdown options
-              await page.evaluate(() => {
-                const items = Array.from(document.querySelectorAll("div, span, li, option"));
-                const xautItem = items.find(el => el.textContent.trim() === "XAUT" && el.offsetParent !== null);
-                if (xautItem) {
-                  xautItem.click();
+                if (clicked) {
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  await page.evaluate(() => {
+                    const options = Array.from(document.querySelectorAll("div, span, li, option"));
+                    const xaut = options.find(el => el.textContent.trim() === "XAUT" && el.offsetParent !== null);
+                    if (xaut) {
+                      xaut.click();
+                    }
+                  });
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                } else {
+                  break;
                 }
-              });
+              }
             } catch (e) {
-              console.log("Dropdown interaction note:", e.message);
+              console.log("Dropdown loop note:", e.message);
             }
 
-            console.log("Waiting 12 seconds for XAUT charts and analytics to render fully...");
+            console.log("Waiting 12 seconds for all XAUT charts to render fully...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
             const dir = path.join(process.cwd(), "screenshots");
@@ -112,5 +119,5 @@ jobs:
       - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured XAUT options analytics screenshot [skip ci]'
+          commit_message: 'Auto-captured XAUT multi-chart analytics screenshot [skip ci]'
           branch: main
