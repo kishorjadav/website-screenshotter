@@ -45,12 +45,11 @@ jobs:
                 "--disable-setuid-sandbox", 
                 "--disable-dev-shm-usage", 
                 "--disable-gpu",
-                "--window-size=1440,1400"
+                "--window-size=1440,1600"
               ]
             });
 
             const page = await browser.newPage();
-            // Expanded height to ensure all three charts are fully visible
             await page.setViewport({ width: 1440, height: 1600 });
 
             console.log("Navigating to Delta Exchange options analytics...");
@@ -62,39 +61,45 @@ jobs:
             console.log("Waiting for page elements to load...");
             await new Promise(resolve => setTimeout(resolve, 6000));
 
-            console.log("Switching all chart dropdowns from BTC to XAUT...");
+            console.log("Switching all three chart dropdowns to XAUT...");
             try {
-              // Loop to find and change every chart dropdown showing BTC to XAUT
-              for (let i = 0; i < 3; i++) {
-                const clicked = await page.evaluate(() => {
-                  const elements = Array.from(document.querySelectorAll("div, button, span"));
-                  const target = elements.find(el => el.textContent.trim() === "BTC" && el.offsetParent !== null && (el.className.includes("dropdown") || el.className.includes("select") || el.querySelector("svg") || el.innerHTML.includes("svg")));
-                  if (target) {
-                    target.click();
-                    return true;
-                  }
-                  return false;
+              // Execute robust multi-dropdown selection inside the page
+              await page.evaluate(async () => {
+                const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+                
+                // Find all dropdown trigger elements across the charts
+                const findTriggers = () => Array.from(document.querySelectorAll("div, button, span")).filter(el => {
+                  const t = el.textContent.trim();
+                  return (t === "BTC" || t === "XAUT" || t === "ETH") && el.offsetParent !== null && el.clientHeight < 50;
                 });
 
-                if (clicked) {
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  await page.evaluate(() => {
-                    const options = Array.from(document.querySelectorAll("div, span, li, option"));
-                    const xaut = options.find(el => el.textContent.trim() === "XAUT" && el.offsetParent !== null);
-                    if (xaut) {
-                      xaut.click();
-                    }
-                  });
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                } else {
-                  break;
+                let triggers = findTriggers();
+                for (let i = 0; i < triggers.length; i++) {
+                  // Re-query to avoid stale elements
+                  triggers = findTriggers();
+                  if (!triggers[i]) break;
+
+                  const trigger = triggers[i];
+                  // If it already says XAUT, skip it
+                  if (trigger.textContent.trim() === "XAUT") continue;
+
+                  trigger.click();
+                  await sleep(800);
+
+                  // Find and click XAUT in the opened menu
+                  const options = Array.from(document.querySelectorAll("div, span, li, option"));
+                  const xautOpt = options.find(o => o.textContent.trim() === "XAUT" && o.offsetParent !== null);
+                  if (xautOpt) {
+                    xautOpt.click();
+                    await sleep(1000);
+                  }
                 }
-              }
+              });
             } catch (e) {
-              console.log("Dropdown loop note:", e.message);
+              console.log("Dropdown automation note:", e.message);
             }
 
-            console.log("Waiting 12 seconds for all XAUT charts to render fully...");
+            console.log("Waiting 12 seconds for all XAUT charts and analytics to render fully...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
             const dir = path.join(process.cwd(), "screenshots");
@@ -119,5 +124,5 @@ jobs:
       - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured XAUT multi-chart analytics screenshot [skip ci]'
+          commit_message: 'Auto-captured XAUT all charts screenshot [skip ci]'
           branch: main
