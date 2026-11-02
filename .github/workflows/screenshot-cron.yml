@@ -24,7 +24,10 @@ on:
 jobs:
   take-screenshot:
     runs-on: ubuntu-latest
-
+    
+# ADD THIS PERMISSIONS BLOCK HERE:
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
