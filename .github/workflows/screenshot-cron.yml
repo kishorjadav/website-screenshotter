@@ -14,8 +14,14 @@ on:
     - cron: '0 8 * * 1-5'
     # 4:30 PM IST (11:00 UTC) - Monday to Friday
     - cron: '0 11 * * 1-5'
-    # 9:35 PM IST (16:05 UTC) - Monday to Friday
-    - cron: '5 16 * * 1-5'
+    # 9:33 PM IST (16:03 UTC) - Monday to Friday
+    - cron: '3 16 * * 1-5'
+    # 9:38 PM IST (16:08 UTC) - Monday to Friday
+    - cron: '8 16 * * 1-5'
+    # 9:45 PM IST (16:15 UTC) - Monday to Friday
+    - cron: '15 16 * * 1-5'
+    # 9:50 PM IST (16:20 UTC) - Monday to Friday
+    - cron: '20 16 * * 1-5'
     # 10:00 PM IST (16:30 UTC) - Monday to Friday
     - cron: '30 16 * * 1-5'
 
