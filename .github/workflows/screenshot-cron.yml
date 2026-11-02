@@ -2,11 +2,11 @@ name: Scheduled Website Screenshotter
 
 on:
   schedule:
-    # 5:30 AM IST (12:00 UTC) - Mon-Frí
+    # 5:30 AM IST (12:00 UTC) - Mon-Fri
     - cron: '0 12 * * 1-5'
-    # 9:35 PM IST (16:05 UTC) - Mon-Frí
+    # 9:35 PM IST (16:05 UTC) - Mon-Fri
     - cron: '5 16 * * 1-5'
-    # 10:00 PM IST (16:30 UTC) - Mon-Frí
+    # 10:00 PM IST (16:30 UTC) - Mon-Fri
     - cron: '30 16 * * 1-5'
 
   workflow_dispatch:
@@ -22,11 +22,11 @@ jobs:
       - name: Create screenshots directory
         run: mkdir -p screenshots
 
-      - name: Download Screenshot via API
+      - name: Download Screenshot via API with Delay
         run: |
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-          # Using a reliable public rendering endpoint
-          curl "https://api.microlink.io/?url=https%3A%2F%2Fwww.delta.exchange%2Fapp%2Foptions_analytics&screenshot=true&meta=false&embed=screenshot.url" -o "screenshots/xaut-$TIMESTAMP.png"
+          # Added &delay=5000 (5 seconds) so the page finishes loading before the screenshot is snapped
+          curl "https://api.microlink.io/?url=https%3A%2F%2Fwww.delta.exchange%2Fapp%2Foptions_analytics&screenshot=true&meta=false&embed=screenshot.url&delay=5000" -o "screenshots/xaut-$TIMESTAMP.png"
 
       - name: Commit and Push Screenshots
         uses: stefanzweifel/git-auto-commit-action@v5
