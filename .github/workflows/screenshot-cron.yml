@@ -19,17 +19,56 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Create screenshots directory
-        run: mkdir -p screenshots
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-      - name: Capture Screenshot via API
+      - name: Install Puppeteer
+        run: npm install puppeteer
+
+      - name: Create Screenshot Script with 5s Delay
         run: |
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
-          # Using a robust rendering API that handles modern web apps and waits 8 seconds for elements to load
-          curl "https://api.microlink.io/?url=https%3A%2F%2Fwww.delta.exchange%2Fapp%2Foptions_analytics&screenshot=true&meta=false&embed=screenshot.url&waitFor=8000" -o "screenshots/xaut-$TIMESTAMP.png"
+          cat << 'EOF' > capture.js
+          const puppeteer = require('puppeteer');
+          const fs = require('fs');
+          const path = require('path');
+
+          async function run() {
+            const browser = await puppeteer.launch({
+              args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            });
+            const page = await browser.newPage();
+            await page.setViewport({ width: 1440, height: 1200 });
+
+            console.log('Navigating to Delta Exchange...');
+            await page.goto('https://www.delta.exchange/app/options_analytics', { waitUntil: 'networkidle2', timeout: 60000 });
+
+            console.log('Waiting 5 seconds for charts to render...');
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            const dir = path.join(__dirname, 'screenshots');
+            if (!fs.existsSync(dir)) fs.mkdirSync(dir);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filePath = path.join(dir, `screenshot-${timestamp}.png`);
+
+            await page.screenshot({ path: filePath, fullPage: true });
+            console.log(`Saved screenshot to ${filePath}`);
+
+            await browser.close();
+          }
+          run().catch(err => {
+            console.error(err);
+            process.exit(1);
+          });
+          EOF
+
+      - name: Run Screenshot Script
+        run: node capture.js
 
       - name: Commit and Push Screenshots
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured screenshot [skip ci]'
+          commit_message: 'Auto-captured loaded screenshot [skip ci]'
           branch: main
