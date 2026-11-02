@@ -61,45 +61,54 @@ jobs:
             console.log("Waiting for page elements to load...");
             await new Promise(resolve => setTimeout(resolve, 6000));
 
-            console.log("Switching all three chart dropdowns to XAUT...");
+            console.log("Switching all three chart dropdowns to XAUT strictly...");
             try {
-              // Execute robust multi-dropdown selection inside the page
               await page.evaluate(async () => {
                 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
                 
-                // Find all dropdown trigger elements across the charts
+                // Find all dropdown triggers currently showing a coin ticker
                 const findTriggers = () => Array.from(document.querySelectorAll("div, button, span")).filter(el => {
                   const t = el.textContent.trim();
-                  return (t === "BTC" || t === "XAUT" || t === "ETH") && el.offsetParent !== null && el.clientHeight < 50;
+                  return (t === "BTC" || t === "ETH" || t === "XAUT") && el.offsetParent !== null && el.clientHeight < 50;
                 });
 
                 let triggers = findTriggers();
                 for (let i = 0; i < triggers.length; i++) {
-                  // Re-query to avoid stale elements
                   triggers = findTriggers();
                   if (!triggers[i]) break;
 
                   const trigger = triggers[i];
-                  // If it already says XAUT, skip it
                   if (trigger.textContent.trim() === "XAUT") continue;
 
                   trigger.click();
-                  await sleep(800);
+                  await sleep(1000);
 
-                  // Find and click XAUT in the opened menu
+                  // Search for exact XAUT option in the opened dropdown list
                   const options = Array.from(document.querySelectorAll("div, span, li, option"));
                   const xautOpt = options.find(o => o.textContent.trim() === "XAUT" && o.offsetParent !== null);
+                  
                   if (xautOpt) {
                     xautOpt.click();
-                    await sleep(1000);
+                    await sleep(1200);
+                  } else {
+                    // Fallback: type XAUT if search input exists
+                    const input = document.querySelector("input[placeholder*=\"Search\"], input[type=\"text\"]");
+                    if (input) {
+                      input.value = "XAUT";
+                      input.dispatchEvent(new Event("input", { bubbles: true }));
+                      await sleep(1000);
+                      const filteredOpt = Array.from(document.querySelectorAll("div, span, li")).find(o => o.textContent.trim() === "XAUT" && o.offsetParent !== null);
+                      if (filteredOpt) filteredOpt.click();
+                    }
                   }
+                  await sleep(1000);
                 }
               });
             } catch (e) {
-              console.log("Dropdown automation note:", e.message);
+              console.log("Dropdown automation error:", e.message);
             }
 
-            console.log("Waiting 12 seconds for all XAUT charts and analytics to render fully...");
+            console.log("Waiting 12 seconds for all XAUT charts to render fully...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
             const dir = path.join(process.cwd(), "screenshots");
@@ -124,5 +133,5 @@ jobs:
       - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured XAUT all charts screenshot [skip ci]'
+          commit_message: 'Auto-captured XAUT strict selection screenshot [skip ci]'
           branch: main
