@@ -61,7 +61,6 @@ jobs:
 
             const page = await browser.newPage();
             
-            // Set high resolution viewport and device scale factor (2x for retina quality)
             await page.setViewport({ 
               width: 1920, 
               height: 2000,
@@ -124,6 +123,32 @@ jobs:
             console.log("Waiting 12 seconds for all XAUT charts to render...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
+            // Inject date and time watermark overlay onto the page
+            await page.evaluate(() => {
+              const now = new Date();
+              // Format nicely for IST time zone
+              const timeString = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "medium" });
+              
+              const badge = document.createElement("div");
+              badge.innerText = "Captured at: " + timeString + " IST";
+              badge.style.position = "fixed";
+              badge.style.top = "15px";
+              badge.style.right = "80px";
+              badge.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
+              badge.style.color = "#00ffcc";
+              badge.style.padding = "10px 18px";
+              badge.style.fontSize = "16px";
+              badge.style.fontFamily = "monospace";
+              badge.style.fontWeight = "bold";
+              badge.style.borderRadius = "6px";
+              badge.style.zIndex = "999999";
+              badge.style.border = "1px solid #00ffcc";
+              document.body.appendChild(badge);
+            });
+
+            // Short pause to let watermark render
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
             const dir = path.join(process.cwd(), "screenshots");
             if (!fs.existsSync(dir)) {
               fs.mkdirSync(dir, { recursive: true });
@@ -132,9 +157,9 @@ jobs:
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
             const filePath = path.join(dir, `xaut-${timestamp}.png`);
 
-            console.log("Taking high-resolution screenshot...");
+            console.log("Taking watermarked screenshot...");
             await page.screenshot({ path: filePath, fullPage: true });
-            console.log(`Successfully saved high-res screenshot to ${filePath}`);
+            console.log(`Successfully saved screenshot to ${filePath}`);
 
             await browser.close();
           })().catch(err => {
@@ -146,5 +171,5 @@ jobs:
       - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured high-res XAUT screenshot [skip ci]'
+          commit_message: 'Auto-captured watermarked XAUT screenshot [skip ci]'
           branch: main
