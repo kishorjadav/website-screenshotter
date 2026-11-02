@@ -9,7 +9,6 @@ on:
     # 10:00 PM IST (16:30 UTC) - Monday to Friday
     - cron: '30 16 * * 1-5'
 
-  # Allows manual testing from the Actions tab anytime
   workflow_dispatch:
 
 jobs:
@@ -27,6 +26,9 @@ jobs:
 
       - name: Install Puppeteer
         run: npm install puppeteer
+
+      - name: Install Chrome Browser for Puppeteer
+        run: npx puppeteer browsers install chrome
 
       - name: Run Screenshot Automation Script
         run: |
@@ -59,13 +61,11 @@ jobs:
             console.log("Waiting 12 seconds for charts and data to render fully...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
-            // Ensure screenshots directory exists
             const dir = path.join(process.cwd(), "screenshots");
             if (!fs.existsSync(dir)) {
               fs.mkdirSync(dir, { recursive: true });
             }
 
-            // Create timestamped filename
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
             const filePath = path.join(dir, `xaut-${timestamp}.png`);
 
