@@ -1,124 +1,357 @@
-- name: Run Screenshot Automation Script
+name: Delta Exchange Screenshot Cron
+
+
+
+on:
+
+  schedule:
+
+    # 5:30 AM IST (00:00 UTC) - Monday to Friday
+
+    - cron: '0 0 * * 1-5'
+
+   
+
+    # 6:30 AM IST (01:00 UTC) - Monday to Friday
+
+    - cron: '0 1 * * 1-5'
+
+    # 10:30 AM IST (05:00 UTC) - Monday to Friday
+
+    - cron: '0 5 * * 1-5'
+
+    # 1:30 PM IST (08:00 UTC) - Monday to Friday
+
+    - cron: '0 8 * * 1-5'
+
+    # 4:30 PM IST (11:00 UTC) - Monday to Friday
+
+    - cron: '0 11 * * 1-5'
+
+    # 9:33 PM IST (16:03 UTC) - Monday to Friday
+
+    - cron: '8 16 * * 1-5'
+
+    # 9:45 PM IST (16:15 UTC) - Monday to Friday
+
+    - cron: '15 16 * * 1-5'
+
+    # 10:00 PM IST (16:30 UTC) - Monday to Friday
+
+    - cron: '30 16 * * 1-5'
+
+
+
+  workflow_dispatch:
+
+
+
+jobs:
+
+  take-screenshot:
+
+    runs-on: ubuntu-latest
+
+    
+
+# ADD THIS PERMISSIONS BLOCK HERE:
+
+    permissions:
+
+      contents: write
+
+    steps:
+
+      - name: Checkout Repository
+
+        uses: actions/checkout@v4
+
+
+
+      - name: Set up Node.js
+
+        uses: actions/setup-node@v4
+
+        with:
+
+          node-version: '20'
+
+
+
+      - name: Install Puppeteer
+
+        run: npm install puppeteer
+
+
+
+      - name: Install Chrome Browser for Puppeteer
+
+        run: npx puppeteer browsers install chrome
+
+
+
+      - name: Run Screenshot Automation Script
+
         run: |
+
           node -e '
+
           const puppeteer = require("puppeteer");
+
           const fs = require("fs");
+
           const path = require("path");
 
+
+
           (async () => {
+
             console.log("Launching headless browser...");
+
             const browser = await puppeteer.launch({
+
               args: [
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
+
+                "--no-sandbox", 
+
+                "--disable-setuid-sandbox", 
+
+                "--disable-dev-shm-usage", 
+
                 "--disable-gpu",
+
                 "--window-size=1920,2000"
+
               ]
+
             });
+
+
 
             const page = await browser.newPage();
+
             
+
             await page.setViewport({ 
+
               width: 1920, 
+
               height: 2000,
+
               deviceScaleFactor: 2 
+
             });
+
+
 
             console.log("Navigating to Delta Exchange options analytics...");
+
             await page.goto("https://www.delta.exchange/app/options_analytics", { 
+
               waitUntil: "networkidle2", 
+
               timeout: 60000 
+
             });
+
+
 
             console.log("Waiting for page elements to load...");
+
             await new Promise(resolve => setTimeout(resolve, 8000));
 
+
+
             console.log("Selecting XAUT across all dropdowns...");
+
             try {
-              const dropdownHandles = await page.evaluateHandle(() => {
-                return Array.from(document.querySelectorAll("div, button, span")).filter(el => {
-                  const text = el.textContent.trim();
-                  return (text === "BTC" || text === "ETH" || text === "XAUT") && 
-                         el.offsetParent !== null && 
-                         el.clientHeight < 50 &&
-                         el.children.length <= 2;
-                });
+
+              await page.evaluate(async () => {
+
+                const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+
+
+                const getAssetDropdowns = () => {
+
+                  return Array.from(document.querySelectorAll("div, button, span")).filter(el => {
+
+                    const text = el.textContent.trim();
+
+                    const isTicker = text === "BTC" || text === "ETH" || text === "XAUT";
+
+                    const isVisible = el.offsetParent !== null && el.clientHeight < 50;
+
+                    return isTicker && isVisible;
+
+                  });
+
+                };
+
+
+
+                let dropdowns = getAssetDropdowns();
+
+                for (let i = 0; i < dropdowns.length; i++) {
+
+                  dropdowns = getAssetDropdowns();
+
+                  if (!dropdowns[i]) break;
+
+
+
+                  const currentBtn = dropdowns[i];
+
+                  if (currentBtn.textContent.trim() === "XAUT") continue;
+
+
+
+                  currentBtn.click();
+
+                  await sleep(1000);
+
+
+
+                  const allVisibleElements = Array.from(document.querySelectorAll("*")).filter(el => el.offsetParent !== null);
+
+                  const xautElement = allVisibleElements.find(el => {
+
+                    const t = el.textContent ? el.textContent.trim() : "";
+
+                    return t === "XAUT" && el !== currentBtn && el.children.length === 0;
+
+                  });
+
+
+
+                  if (xautElement) {
+
+                    xautElement.click();
+
+                  } else {
+
+                    const optionsList = allVisibleElements.filter(el => el.textContent.trim() === "XAUT");
+
+                    if (optionsList[0]) optionsList[0].click();
+
+                  }
+
+                  await sleep(1500);
+
+                }
+
               });
 
-              const count = await page.evaluate(els => els.length, dropdownHandles);
-              
-              for (let i = 0; i < count; i++) {
-                await page.evaluate((idx) => {
-                  const dropdowns = Array.from(document.querySelectorAll("div, button, span")).filter(el => {
-                    const text = el.textContent.trim();
-                    return (text === "BTC" || text === "ETH" || text === "XAUT") && 
-                           el.offsetParent !== null && 
-                           el.clientHeight < 50 &&
-                           el.children.length <= 2;
-                  });
-                  if (dropdowns[idx]) {
-                    dropdowns[idx].click();
-                  }
-                }, i);
-
-                await new Promise(r => setTimeout(r, 1500));
-
-                await page.evaluate(() => {
-                  const allEls = Array.from(document.querySelectorAll("div, span, li, a"));
-                  const target = allEls.find(el => el.offsetParent !== null && el.textContent.trim() === "XAUT" && el.children.length === 0);
-                  if (target) {
-                    target.click();
-                  }
-                });
-
-                await new Promise(r => setTimeout(r, 2000));
-              }
             } catch (e) {
+
               console.log("Dropdown interaction note:", e.message);
+
             }
 
+
+
             console.log("Waiting 12 seconds for all XAUT charts to render...");
+
             await new Promise(resolve => setTimeout(resolve, 12000));
 
+
+
+            // Inject date and time watermark overlay onto the page
+
             await page.evaluate(() => {
+
               const now = new Date();
+
+              // Format nicely for IST time zone
+
               const timeString = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "medium" });
+
               
+
               const badge = document.createElement("div");
+
               badge.innerText = "Captured at: " + timeString + " IST";
+
               badge.style.position = "fixed";
+
               badge.style.top = "15px";
+
               badge.style.right = "80px";
+
               badge.style.backgroundColor = "rgba(0, 0, 0, 0.85)";
+
               badge.style.color = "#00ffcc";
+
               badge.style.padding = "10px 18px";
+
               badge.style.fontSize = "16px";
+
               badge.style.fontFamily = "monospace";
+
               badge.style.fontWeight = "bold";
+
               badge.style.borderRadius = "6px";
+
               badge.style.zIndex = "999999";
+
               badge.style.border = "1px solid #00ffcc";
+
               document.body.appendChild(badge);
+
             });
+
+
+
+            // Short pause to let watermark render
 
             await new Promise(resolve => setTimeout(resolve, 1000));
 
+
+
             const dir = path.join(process.cwd(), "screenshots");
+
             if (!fs.existsSync(dir)) {
+
               fs.mkdirSync(dir, { recursive: true });
+
             }
 
+
+
             const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+
             const filePath = path.join(dir, `xaut-${timestamp}.png`);
 
+
+
             console.log("Taking watermarked screenshot...");
+
             await page.screenshot({ path: filePath, fullPage: true });
+
             console.log(`Successfully saved screenshot to ${filePath}`);
 
+
+
             await browser.close();
+
           })().catch(err => {
-            console.log("Error during screenshot execution:", err);
+
+            console.error("Error during screenshot execution:", err);
+
             process.exit(1);
+
           });
+
           '
+
+
+
+      - name: Commit and Push Screenshot
+
+        uses: stefanzweifel/git-auto-commit-action@v5
+
+        with:
+
+          commit_message: 'Auto-captured watermarked XAUT screenshot [skip ci]'
+
+          branch: main
