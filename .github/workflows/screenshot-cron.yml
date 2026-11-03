@@ -78,7 +78,7 @@ jobs:
             });
 
             console.log("Waiting for page elements to load...");
-            await new Promise(resolve => setTimeout(resolve, 6000));
+            await new Promise(resolve => setTimeout(resolve, 8000));
 
             console.log("Selecting XAUT across all dropdowns...");
             try {
@@ -117,7 +117,7 @@ jobs:
                     const optionsList = allVisibleElements.filter(el => el.textContent.trim() === "XAUT");
                     if (optionsList[0]) optionsList[0].click();
                   }
-                  await sleep(1200);
+                  await sleep(1500);
                 }
               });
             } catch (e) {
