@@ -9,9 +9,9 @@
             console.log("Launching headless browser...");
             const browser = await puppeteer.launch({
               args: [
-                "--no-sandbox", 
-                "--disable-setuid-sandbox", 
-                "--disable-dev-shm-usage", 
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
                 "--disable-gpu",
                 "--window-size=1920,2000"
               ]
@@ -36,7 +36,6 @@
 
             console.log("Selecting XAUT across all dropdowns...");
             try {
-              // Find all dropdown triggers containing BTC, ETH, or XAUT
               const dropdownHandles = await page.evaluateHandle(() => {
                 return Array.from(document.querySelectorAll("div, button, span")).filter(el => {
                   const text = el.textContent.trim();
@@ -50,7 +49,6 @@
               const count = await page.evaluate(els => els.length, dropdownHandles);
               
               for (let i = 0; i < count; i++) {
-                // Re-query dropdowns fresh on each iteration to avoid stale element references
                 await page.evaluate((idx) => {
                   const dropdowns = Array.from(document.querySelectorAll("div, button, span")).filter(el => {
                     const text = el.textContent.trim();
@@ -64,23 +62,17 @@
                   }
                 }, i);
 
-                await page.waitForTimeout(1500);
+                await new Promise(r => setTimeout(r, 1500));
 
-                // Look for XAUT option in the newly opened menu/popup
-                const clickedXaut = await page.evaluate(() => {
+                await page.evaluate(() => {
                   const allEls = Array.from(document.querySelectorAll("div, span, li, a"));
                   const target = allEls.find(el => el.offsetParent !== null && el.textContent.trim() === "XAUT" && el.children.length === 0);
                   if (target) {
                     target.click();
-                    return true;
                   }
-                  return false;
                 });
 
-                if (!clickedXaut) {
-                  console.log(`Dropdown ${i}: XAUT option item not found directly, trying fallback click.`);
-                }
-                await page.waitForTimeout(2000);
+                await new Promise(r => setTimeout(r, 2000));
               }
             } catch (e) {
               console.log("Dropdown interaction note:", e.message);
@@ -89,7 +81,6 @@
             console.log("Waiting 12 seconds for all XAUT charts to render...");
             await new Promise(resolve => setTimeout(resolve, 12000));
 
-            // Inject date and time watermark overlay onto the page
             await page.evaluate(() => {
               const now = new Date();
               const timeString = now.toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "medium" });
@@ -127,7 +118,7 @@
 
             await browser.close();
           })().catch(err => {
-            console.error("Error during screenshot execution:", err);
+            console.log("Error during screenshot execution:", err);
             process.exit(1);
           });
           '
