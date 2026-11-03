@@ -1,2 +1,53 @@
-- name: Run Screenshot Automation Script
+name: Delta Exchange Screenshot Cron
+
+on:
+  schedule:
+    # 5:30 AM IST (00:00 UTC) - Monday to Friday
+    - cron: '0 0 * * 1-5'
+    # 6:30 AM IST (01:00 UTC) - Monday to Friday
+    - cron: '0 1 * * 1-5'
+    # 10:30 AM IST (05:00 UTC) - Monday to Friday
+    - cron: '0 5 * * 1-5'
+    # 1:30 PM IST (08:00 UTC) - Monday to Friday
+    - cron: '0 8 * * 1-5'
+    # 4:30 PM IST (11:00 UTC) - Monday to Friday
+    - cron: '0 11 * * 1-5'
+    # 9:33 PM IST (16:03 UTC) - Monday to Friday
+    - cron: '8 16 * * 1-5'
+    # 9:45 PM IST (16:15 UTC) - Monday to Friday
+    - cron: '15 16 * * 1-5'
+    # 10:00 PM IST (16:30 UTC) - Monday to Friday
+    - cron: '30 16 * * 1-5'
+
+  workflow_dispatch:
+
+jobs:
+  take-screenshot:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Puppeteer
+        run: npm install puppeteer
+
+      - name: Install Chrome Browser for Puppeteer
+        run: npx puppeteer browsers install chrome
+
+      - name: Run Screenshot Automation Script
         run: node screenshot.js
+
+      - name: Commit and Push Screenshot
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'Auto-captured watermarked XAUT screenshot [skip ci]'
+          branch: main
