@@ -46,8 +46,12 @@ jobs:
       - name: Run Screenshot Automation Script
         run: node screenshot.js
 
+      - name: Get Current Date and Time
+        id: datetime
+        run: echo "NOW=$(TZ='Asia/Kolkata' date +'%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
+
       - name: Commit and Push Screenshot
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: 'Auto-captured watermarked XAUT screenshot [skip ci]'
+          commit_message: 'XAUT at ${{ env.NOW }}'
           branch: main
