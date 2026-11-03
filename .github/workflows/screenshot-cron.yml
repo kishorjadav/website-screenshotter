@@ -1,6 +1,6 @@
 - name: Run Screenshot Automation Script
         run: |
-          node -e '
+          cat << 'EOF' > screenshot.js
           const puppeteer = require("puppeteer");
           const fs = require("fs");
           const path = require("path");
@@ -121,4 +121,5 @@
             console.log("Error during screenshot execution:", err);
             process.exit(1);
           });
-          '
+          EOF
+          node screenshot.js
